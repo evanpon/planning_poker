@@ -1,0 +1,104 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: planning_poker
+# app and org for use with dashboard.serverless.com
+app: planning_poker
+org: evanpon
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+
+provider:
+  name: aws
+  apiName: planning_poker
+  stage: dev
+  websocketsApiName: planning_poker
+  logs: 
+    websocket: true
+  runtime: python3.7
+  region: us-west-2
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+
+# you can add packaging information here
+#package:
+#  include:
+#    - include-me.py
+#    - include-me-dir/**
+#  exclude:
+#    - exclude-me.py
+#    - exclude-me-dir/**
+
+functions:
+  connect:
+    handler: lambdas/connect.execute
+    events:
+      - websocket:
+          route: $connect 
+          routeResponseSelectionExpression: $default
+  vote:
+    handler: lambdas/vote.execute
+    events:
+      - websocket:
+          route: vote
+  disconnect:
+    handler: lambdas/disconnect.execute
+    events:
+      - websocket:
+          route: $disconnect
+  join:
+    handler: lambdas/join.execute
+    events:
+      - websocket:
+          route: join
+  default:
+    handler: lambdas/default.execute
+    events:
+      - websocket:
+          route: $default
+
+resources:
+  Resources:
+    TodosDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: partition_id
+            AttributeType: S
+          - 
+            AttributeName: connection_id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: partition_id
+            KeyType: HASH
+          - 
+            AttributeName: connection_id
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
