@@ -40,7 +40,11 @@ def get_room_row(room, connection_id):
 def get_connection_row(connection_id):
     return get_item(partition_id_from_connection(connection_id), connection_id)
 
-def store_item(partition_id, connection_id, attributes={}):
+def store_item(partition_id, connection_id, attributes=None):
+    ''' Stores the provided attributes in Dynamo. If none are provided, it just stores the 
+        composite key.'''
+    if attributes is None:
+        attributes = {}
     key = {'partition_id': partition_id, 'connection_id': connection_id}
     item = {**key, **attributes}
     return table.put_item(
