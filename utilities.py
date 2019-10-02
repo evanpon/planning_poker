@@ -22,7 +22,7 @@ def send_to_connection(event, message, connection_id=None):
         gatewayapi.post_to_connection(Data=message,ConnectionId=connection_id)
     except Exception as error:
         print("Error sending to connection:", error)
-        delete_all_rows_for_connection(connection_id)
+        delete_all_rows_for_connection(event, connection_id)
 
 
 def get_item(partition_id, connection_id):
@@ -77,14 +77,26 @@ def delete_item(partition_id, connection_id):
             'connection_id': connection_id
         }
     )
-def delete_all_rows_for_connection(connection_id):
+def delete_all_rows_for_connection(event, connection_id):
     user = get_connection_row(connection_id)
     if user:
         room = user["room"]
         delete_item(room, connection_id)
         delete_item(partition_id_from_connection(connection_id), connection_id)
 
+        users = get_room_members(room)
+        message = f'{user["user"]} has left {room}'
+        notify_users(event, users, message)
+        finish_voting_if_complete(event, room, users)
 
+def notify_users(event, users, message):
+    for user in users:
+        connection_id = user['connection_id']
+        send_to_connection(event, message, connection_id)
+
+def notify_room(event, room, message):
+    users = get_room_members(room)
+    notify_users(event, users, message)
 
 def get_room_members(room):
     response = table.query(
@@ -105,4 +117,17 @@ def handle_error(message, event, error_code=400):
     return {
         "statusCode": error_code
     }
+
+def finish_voting_if_complete(event, room, users, completed_votes=None):
+    if completed_votes is None:
+        completed_votes = []
+        for user in users:
+            vote = user.get("vote", None)
+            if vote is not None:
+                completed_votes.append({"user": user["user"], "vote": int(vote)})
+    if len(users) == len(completed_votes):
+        for user in users:
+            connection_id = user['connection_id']
+            update_item(room, connection_id, {"vote": None})
+            send_to_connection(event, completed_votes, connection_id)
 

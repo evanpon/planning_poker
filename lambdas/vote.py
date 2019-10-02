@@ -1,6 +1,7 @@
 import json
 import os
-from utilities import handle_error, get_connection_row, update_item, get_room_members, send_to_connection
+from utilities import (handle_error, get_connection_row, update_item, 
+    get_room_members, send_to_connection, finish_voting_if_complete)
 
 
 def execute(event, context):
@@ -36,12 +37,13 @@ def execute(event, context):
             collected_votes.append({"user": other_user["user"], "vote": int(vote)})
         send_to_connection(event, message, other_connection_id)
 
-    if len(collected_votes) == len(connected_users):
-        # Everyone has voted
-        for user in connected_users:
-            other_connection_id = user['connection_id']
-            update_item(room, other_connection_id, {"vote": None})
-            send_to_connection(event, collected_votes, other_connection_id)
+    finish_voting_if_complete(event, room, connected_users, collected_votes)
+    # if len(collected_votes) == len(connected_users):
+    #     # Everyone has voted
+    #     for user in connected_users:
+    #         other_connection_id = user['connection_id']
+    #         update_item(room, other_connection_id, {"vote": None})
+    #         send_to_connection(event, collected_votes, other_connection_id)
 
     return {
         "statusCode": 200
