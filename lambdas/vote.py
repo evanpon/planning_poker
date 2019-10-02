@@ -27,18 +27,20 @@ def execute(event, context):
     update_item(room, connection_id, {"vote": vote})
     connected_users = get_room_members(room)
 
-    voting_finished = True
+    collected_votes = []
     for other_user in connected_users:
         other_connection_id = other_user['connection_id']
-        if other_user.get("vote", None) is None:
-            voting_finished = False
-        message = {"room": room, "voter": user["user"], "vote": vote}
+        if other_user.get("vote", None) is not None:
+            collected_votes.append({"user": user["user"], "vote": user["vote"]})
+        message = {"room": room, "user": user["user"]}
         send_to_connection(event, message, other_connection_id)
 
-    if voting_finished:
-        for u in connected_users:
-            other_connection_id = u['connection_id']
+    if len(collected_votes) == len(connected_users):
+        # Everyone has voted
+        for user in connected_users:
+            other_connection_id = user['connection_id']
             update_item(room, other_connection_id, {"vote": None})
+            send_to_connection(event, collected_votes, other_connection_id)
 
     return {
         "statusCode": 200
