@@ -28,11 +28,12 @@ def execute(event, context):
     connected_users = get_room_members(room)
 
     collected_votes = []
+    message = {"room": room, "user": user["user"]}
     for other_user in connected_users:
         other_connection_id = other_user['connection_id']
-        if other_user.get("vote", None) is not None:
-            collected_votes.append({"user": user["user"], "vote": user["vote"]})
-        message = {"room": room, "user": user["user"]}
+        vote = other_user.get("vote", None)
+        if vote is not None:
+            collected_votes.append({"user": other_user["user"], "vote": int(vote)})
         send_to_connection(event, message, other_connection_id)
 
     if len(collected_votes) == len(connected_users):
