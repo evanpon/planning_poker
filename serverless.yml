@@ -11,9 +11,9 @@
 #
 # Happy Coding!
 
-service: planning_poker
+service: poker
 # app and org for use with dashboard.serverless.com
-app: planning_poker
+app: poker
 org: evanpon
 
 # You can pin your service to only deploy with a specific Serverless version
